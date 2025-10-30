@@ -2,18 +2,18 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCOUNT_ID = '<AWS_ACCOUNT_ID>'
-        AWS_REGION = '<AWS_REGION>'
+        AWS_ACCOUNT_ID = credentials('aws-account-id')       // Secret Text credential
+        AWS_REGION = 'ap-south-1'
         IMAGE_REPO_NAME = 'php-rds-app'
         IMAGE_TAG = 'latest'
         ECR_URL = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_REPO_NAME}:${IMAGE_TAG}"
-        EC2_PUBLIC_IP = '<EC2_PUBLIC_IP>'
+        EC2_PUBLIC_IP = credentials('ec2-public-ip')         // Secret Text credential
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/<your-username>/<your-repo>.git'
+                git branch: 'main', url: 'https://github.com/arpitt29/bitcot-php-app.git'
             }
         }
 
@@ -25,7 +25,13 @@ pipeline {
 
         stage('Login to AWS ECR') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-creds',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
                     sh '''
                       aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
                       aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
@@ -51,7 +57,6 @@ pipeline {
                     sh """
                     ssh -o StrictHostKeyChecking=no ubuntu@${EC2_PUBLIC_IP} << 'EOF'
                     set -e
-                    # Ensure AWS CLI present and login (if EC2 has no instance role)
                     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                     docker pull ${ECR_URL}
                     docker stop php-rds-app || true
