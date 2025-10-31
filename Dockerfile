@@ -1,8 +1,5 @@
-# Use the official PHP image with Apache
-FROM php:8.2-apache
-
-# Install the mysqli extension for MySQL connectivity
+FROM php:8.1-apache
 RUN docker-php-ext-install mysqli
-
-# Copy application files to the web server's root directory
-COPY index.php /var/www/html/
+COPY src/ /var/www/html/
+EXPOSE 80
+CMD ["apache2-foreground"]
